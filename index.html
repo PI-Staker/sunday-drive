@@ -55,13 +55,65 @@
     font-weight:500;
     font-size:clamp(28px, 6vw, 40px);
     text-align:center;
-    margin:0 0 36px;
+    margin:0 0 28px;
     color:var(--text);
     letter-spacing:-0.01em;
   }
+
+  .vibes-label{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    letter-spacing:0.1em;
+    text-transform:uppercase;
+    color:var(--muted);
+    text-align:center;
+    margin-bottom:12px;
+  }
+  .vibes{
+    display:grid;
+    grid-template-columns:repeat(2, 1fr);
+    gap:10px;
+    margin-bottom:28px;
+  }
+  @media (min-width:480px){
+    .vibes{ grid-template-columns:repeat(5, 1fr); }
+  }
+  .vibe-card{
+    background:var(--card);
+    border:1px solid var(--card-line);
+    border-radius:12px;
+    padding:12px 10px;
+    text-align:center;
+    cursor:pointer;
+    transition:border-color 0.15s ease, background 0.15s ease, transform 0.1s ease;
+  }
+  .vibe-card:hover{ border-color:rgba(226,165,77,0.5); }
+  .vibe-card:active{ transform:scale(0.98); }
+  .vibe-card.selected{
+    border-color:var(--gold);
+    background:rgba(226,165,77,0.1);
+  }
+  .vibe-card .v-name{
+    font-size:13px;
+    font-weight:600;
+    color:var(--text);
+    margin-bottom:3px;
+  }
+  .vibe-card .v-sub{
+    font-size:11px;
+    color:var(--muted);
+    line-height:1.3;
+  }
+  .vibe-card:focus-visible{
+    outline:2px solid var(--gold);
+    outline-offset:2px;
+  }
+
   .picker{
     display:flex;
-    justify-content:center;
+    flex-direction:column;
+    align-items:center;
+    gap:10px;
     margin-bottom:8px;
   }
   button.roll{
@@ -86,9 +138,15 @@
     outline:2px solid var(--gold);
     outline-offset:3px;
   }
+  .picker-hint{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11.5px;
+    color:var(--muted);
+    min-height:16px;
+  }
 
   #result{
-    margin-top:40px;
+    margin-top:36px;
     opacity:0;
     transform:translateY(6px);
     transition:opacity 0.5s ease, transform 0.5s ease;
@@ -146,7 +204,31 @@
     font-style:italic;
     color:var(--muted);
     font-size:15px;
+    margin-bottom:20px;
+  }
+
+  .maps-link{
+    display:flex;
+    justify-content:center;
     margin-bottom:28px;
+  }
+  .maps-link a{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    font-family:'Work Sans', sans-serif;
+    font-size:14px;
+    font-weight:500;
+    color:var(--gold);
+    text-decoration:none;
+    border:1px solid rgba(226,165,77,0.4);
+    border-radius:999px;
+    padding:9px 18px;
+    transition:background 0.15s ease, border-color 0.15s ease;
+  }
+  .maps-link a:hover{
+    background:rgba(226,165,77,0.08);
+    border-color:var(--gold);
   }
 
   .card{
@@ -164,11 +246,22 @@
     color:var(--gold);
     margin:0 0 14px;
     font-weight:500;
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+  }
+  .card h2 .count{
+    color:var(--muted);
+    font-weight:400;
+    text-transform:none;
+    letter-spacing:0;
   }
   .tracks{
     list-style:none;
     margin:0;
     padding:0;
+    max-height:340px;
+    overflow-y:auto;
   }
   .tracks li{
     display:flex;
@@ -182,7 +275,7 @@
     font-family:'JetBrains Mono', monospace;
     color:var(--muted);
     font-size:13px;
-    width:18px;
+    width:22px;
     flex-shrink:0;
   }
   .stops{
@@ -240,8 +333,12 @@
   <div class="eyebrow">Western Cape · Sunday</div>
   <h1>Where to this week?</h1>
 
+  <div class="vibes-label">Pick a vibe (optional)</div>
+  <div class="vibes" id="vibeCards"></div>
+
   <div class="picker">
     <button class="roll" id="rollBtn">Pick my Sunday drive</button>
+    <div class="picker-hint" id="pickerHint">No vibe selected — fully random</div>
   </div>
 
   <div id="result">
@@ -254,9 +351,12 @@
       <span class="pill" id="lengthPill"></span>
     </div>
     <div class="vibe" id="vibeLine"></div>
+    <div class="maps-link">
+      <a id="mapsBtn" href="#" target="_blank" rel="noopener">Open route in Google Maps →</a>
+    </div>
 
     <div class="card">
-      <h2>Playlist</h2>
+      <h2><span>Playlist</span><span class="count" id="trackCount"></span></h2>
       <ul class="tracks" id="tracksList"></ul>
     </div>
 
@@ -272,108 +372,165 @@
 </div>
 
 <script>
+const vibeDefs = [
+  { key: "calm", name: "Calm & Reflective", sub: "Slow acoustic, quiet coast" },
+  { key: "upbeat", name: "Upbeat & Fun", sub: "Windows down, energy up" },
+  { key: "classic", name: "Classic & Nostalgic", sub: "Timeless rock & country" },
+  { key: "moody", name: "Moody & Atmospheric", sub: "Ambient, instrumental" },
+  { key: "epic", name: "Epic & Adventurous", sub: "Longer hauls, big scenery" }
+];
+
 const drives = [
   {
     name: "Muizenberg → Kalk Bay",
     duration: 22,
     vibe: "Calm, reflective, slow",
-    playlist: ["Jack Johnson – Better Together","Hollow Coves – Coastline","Ben Howard – Old Pine","Ziggy Alberts – Runaway","Vance Joy – Saturday Sun","Angus & Julia Stone – Chateau","Hollow Coves – The Woods"],
+    vibeKey: "calm",
+    origin: "Muizenberg, Cape Town",
+    destination: "Kalk Bay, Cape Town",
+    playlist: ["Jack Johnson – Better Together","Hollow Coves – Coastline","Ben Howard – Old Pine","Ziggy Alberts – Runaway","Vance Joy – Saturday Sun","Angus & Julia Stone – Chateau","Hollow Coves – The Woods","Cat Stevens – Wild World"],
     stops: ["Coffee at Olympia Café in Kalk Bay","Browse the harbour's bookshops and antique stores","Watch the seals lounging around the harbour"]
   },
   {
     name: "Sea Point → Hout Bay via Chapman's Peak",
     duration: 30,
     vibe: "Windows down, road-trip energy",
-    playlist: ["The Killers – Mr. Brightside","Empire of the Sun – Walking on a Dream","MGMT – Electric Feel","Foster The People – Sit Next to Me","Two Door Cinema Club – What You Know","COIN – Talk Too Much","Phoenix – Lisztomania"],
+    vibeKey: "upbeat",
+    origin: "Sea Point, Cape Town",
+    destination: "Hout Bay, Cape Town",
+    waypoint: "Chapman's Peak Drive, Cape Town",
+    playlist: ["The Killers – Mr. Brightside","Empire of the Sun – Walking on a Dream","MGMT – Electric Feel","Foster The People – Sit Next to Me","Two Door Cinema Club – What You Know","COIN – Talk Too Much","Phoenix – Lisztomania","Passion Pit – Sleepyhead","Metric – Help I'm Alone","Bastille – Pompeii"],
     stops: ["Chapman's Peak lookout points (toll applies)","Fish and chips in Hout Bay","Ice cream while watching the boats return to harbour"]
   },
   {
     name: "Gordon's Bay → Rooi-Els (Clarence Drive)",
     duration: 25,
     vibe: "Nostalgic, timeless, effortlessly cool",
-    playlist: ["Fleetwood Mac – Dreams","Eagles – Take It Easy","America – Ventura Highway","Elton John – Tiny Dancer","Bruce Springsteen – Dancing in the Dark","Tom Petty – Free Fallin'"],
+    vibeKey: "classic",
+    origin: "Gordon's Bay, Western Cape",
+    destination: "Rooi-Els, Western Cape",
+    playlist: ["Fleetwood Mac – Dreams","Eagles – Take It Easy","America – Ventura Highway","Elton John – Tiny Dancer","Bruce Springsteen – Dancing in the Dark","Tom Petty – Free Fallin'","Steve Miller Band – The Joker","Boz Scaggs – Lowdown"],
     stops: ["Sunset viewpoints along the R44","Rooi-Els beach","Whale spotting, June to November"]
   },
   {
     name: "Bloubergstrand → Melkbosstrand",
     duration: 23,
     vibe: "Coffee, cameras and ocean air",
-    playlist: ["Dayglow – Can I Call You Tonight?","Rex Orange County – Sunflower","Peach Pit – Tommy's Party","Clairo – Sofia","Wallows – Are You Bored Yet?","Boy Pablo – Everytime"],
+    vibeKey: "upbeat",
+    origin: "Bloubergstrand, Cape Town",
+    destination: "Melkbosstrand, Cape Town",
+    playlist: ["Dayglow – Can I Call You Tonight?","Rex Orange County – Sunflower","Peach Pit – Tommy's Party","Clairo – Sofia","Wallows – Are You Bored Yet?","Boy Pablo – Everytime","Still Woozy – Goodie Bag","Cuco – Lo Que Siento"],
     stops: ["Beachfront café with Table Mountain across the bay","A sunset photography stop","Local bakeries along the way"]
   },
   {
     name: "Simon's Town → Cape Point Gate",
     duration: 30,
     vibe: "Quiet moments, deep breaths",
-    playlist: ["Bon Iver – Holocene","Novo Amor – Anchor","Lord Huron – The Night We Met","Phoebe Bridgers – Scott Street","Hozier – Cherry Wine","Daughter – Youth","José González – Stay Alive"],
+    vibeKey: "calm",
+    origin: "Simon's Town, Western Cape",
+    destination: "Cape Point Gate, Cape Point Nature Reserve",
+    playlist: ["Bon Iver – Holocene","Novo Amor – Anchor","Lord Huron – The Night We Met","Phoebe Bridgers – Scott Street","Hozier – Cherry Wine","Daughter – Youth","José González – Stay Alive","The National – I Need My Girl","Sufjan Stevens – Futile Devices","Fleet Foxes – Blue Ridge Mountains"],
     stops: ["Boulders Beach penguin viewpoint","Buffels Bay for a picnic","Watch for baboons and ostriches en route"]
   },
   {
     name: "Victoria Road: Sea Point → Camps Bay → Hout Bay",
     duration: 35,
     vibe: "Big Atlantic views, unhurried",
-    playlist: ["Khruangbin – Time (You and I)","Beach House – Space Song","Tycho – Awake","Bonobo – Cirrus","The War on Drugs – Under the Pressure"],
+    vibeKey: "moody",
+    origin: "Sea Point, Cape Town",
+    destination: "Hout Bay, Cape Town",
+    waypoint: "Camps Bay, Cape Town",
+    playlist: ["Khruangbin – Time (You and I)","Beach House – Space Song","Tycho – Awake","Bonobo – Cirrus","The War on Drugs – Under the Pressure","Poolside – Harvest Moon","Toro y Moi – Rose Quartz","Cut Copy – Lights & Music","STRFKR – Golden Light","Washed Out – Feel It All Around","Men I Trust – Show Me How"],
     stops: ["Llandudno viewpoint from Suikerbossie Drive","Fish on the Rocks at Hout Bay harbour"]
   },
   {
     name: "Boyes Drive: Lakeside → Kalk Bay",
     duration: 15,
     vibe: "Quick hit, big payoff",
-    playlist: ["Half Moon Run – Full Circle","Local Natives – Dark Days","The Paper Kites – Bloom","Sufjan Stevens – Mystery of Love"],
+    vibeKey: "calm",
+    origin: "Lakeside, Cape Town",
+    destination: "Kalk Bay, Cape Town",
+    waypoint: "Boyes Drive, Cape Town",
+    playlist: ["Half Moon Run – Full Circle","Local Natives – Dark Days","The Paper Kites – Bloom","Sufjan Stevens – Mystery of Love","Beach House – Myth"],
     stops: ["Whale-watching pullouts, June to November","The old Shark Spotters lookout"]
   },
   {
     name: "Durbanville → Philadelphia",
     duration: 28,
     vibe: "Farmland, quiet backroads",
-    playlist: ["Chris Stapleton – Tennessee Whiskey","The Lumineers – Flowers in Your Hair","Zac Brown Band – Colder Weather","Mumford & Sons – Below My Feet"],
+    vibeKey: "classic",
+    origin: "Durbanville, Cape Town",
+    destination: "Philadelphia, Western Cape",
+    playlist: ["Chris Stapleton – Tennessee Whiskey","The Lumineers – Flowers in Your Hair","Zac Brown Band – Colder Weather","Mumford & Sons – Below My Feet","The Wood Brothers – Postcards from Hell","Nathaniel Rateliff & The Night Sweats – S.O.B.","Alabama Shakes – Hold On","The Head and the Heart – Down in the Valley","Shakey Graves – Dearly Departed"],
     stops: ["Pepper Tree Art Stable & Coffee Shop","Eucalyptus-shaded farm road most of the way"]
   },
   {
     name: "Signal Hill loop",
     duration: 15,
     vibe: "Quick city-and-sea fix",
-    playlist: ["Bombay Bicycle Club – Feel","Glass Animals – Gooey","alt-J – Breezeblocks"],
+    vibeKey: "upbeat",
+    origin: "Cape Town City Centre",
+    destination: "Signal Hill, Cape Town",
+    playlist: ["Bombay Bicycle Club – Feel","Glass Animals – Gooey","alt-J – Breezeblocks","Foals – My Number","MGMT – Kids"],
     stops: []
   },
   {
     name: "Ou Kaapse Weg → Cape Point Nature Reserve gate",
     duration: 20,
     vibe: "Mountain pass into the wild",
-    playlist: ["Bibio – Lovers' Carvings","Nils Frahm – Says","Ólafur Arnalds – Near Light"],
+    vibeKey: "moody",
+    origin: "Tokai, Cape Town",
+    destination: "Cape Point Nature Reserve",
+    waypoint: "Ou Kaapse Weg, Cape Town",
+    playlist: ["Bibio – Lovers' Carvings","Nils Frahm – Says","Ólafur Arnalds – Near Light","Jon Hopkins – Everything Connected","Kiasmos – Looped","Max Richter – On the Nature of Daylight","Balmorhea – Bowman"],
     stops: ["Silvermine viewpoint on the way up"]
   },
   {
     name: "Sir Lowry's Pass",
     duration: 20,
     vibe: "Big view, up and over",
-    playlist: ["The Paper Kites – Electric Indigo","Novo Amor – Terraform","Efterklang – Mirador"],
+    vibeKey: "moody",
+    origin: "Somerset West, Western Cape",
+    destination: "Grabouw, Western Cape",
+    playlist: ["The Paper Kites – Electric Indigo","Novo Amor – Terraform","Efterklang – Mirador","Sigur Rós – Hoppípolla","Explosions in the Sky – Your Hand in Mine","Emancipator – Soon It Will Be Cold Enough","Helios – Halving the Compass"],
     stops: ["Steenbras Dam viewpoint (catch it on the way back)"]
   },
   {
     name: "Gordon's Bay → Betty's Bay → Hermanus",
     duration: 75,
     vibe: "Half-day whale coast",
-    playlist: ["Fleet Foxes – White Winter Hymnal","The Head and the Heart – Rivers and Roads","First Aid Kit – Emmylou","Bon Iver – Skinny Love"],
+    vibeKey: "epic",
+    origin: "Gordon's Bay, Western Cape",
+    destination: "Hermanus, Western Cape",
+    waypoint: "Betty's Bay, Western Cape",
+    playlist: ["Fleet Foxes – White Winter Hymnal","The Head and the Heart – Rivers and Roads","First Aid Kit – Emmylou","Bon Iver – Skinny Love","The Lumineers – Ho Hey","Mumford & Sons – The Cave","Ben Howard – Only Love","Iron & Wine – Boy with a Coin","The Paper Kites – Woodland","Vance Joy – Riptide","City and Colour – Comin' Home","The Decemberists – June Hymn","Local Natives – Airplanes","Novo Amor – Origami","José González – Heartbeats","Damien Rice – The Blower's Daughter","Ray LaMontagne – Trouble","Blind Pilot – Three Rounds and a Sound","The Tallest Man on Earth – The Wild Hunt","Wild Rivers – Thinking 'Bout Love","Andrew Belle – In My Veins","Foy Vance – Guiding Light","Gregory Alan Isakov – The Stable Song","Phosphorescent – Song for Zula"],
     stops: ["Stony Point penguin colony in Betty's Bay","Hermanus cliff path, prime whale watching June–Nov"]
   },
   {
     name: "Bainskloof Pass: Wellington → Ceres",
     duration: 45,
     vibe: "Wild mountain river drive",
-    playlist: ["Fink – Warm Shadow","Ben Howard – Keep Your Head Up","James Vincent McMorrow – Cavalier"],
+    vibeKey: "epic",
+    origin: "Wellington, Western Cape",
+    destination: "Ceres, Western Cape",
+    playlist: ["Fink – Warm Shadow","Ben Howard – Keep Your Head Up","James Vincent McMorrow – Cavalier","The Tallest Man on Earth – Love Is All","Bon Iver – Re: Stacks","Sufjan Stevens – Chicago","Novo Amor – Cabo","Gregory Alan Isakov – Amsterdam","City and Colour – The Girl","Iron & Wine – Flightless Bird, American Mouth","Bear's Den – Agape","Passenger – Let Her Go","Dermot Kennedy – Power Over Me","Ólafur Arnalds – Old Skin"],
     stops: ["Swimming spots along the Witte River","Picnic sites in Limietberg Nature Reserve"]
   },
   {
     name: "West Coast: Yzerfontein → Darling → Langebaan → Paternoster",
     duration: 90,
     vibe: "Big sky, small towns, full day",
-    playlist: ["Local Natives – Airplanes","Fleet Foxes – Mykonos","Beirut – Nantes","Vampire Weekend – Step"],
+    vibeKey: "epic",
+    origin: "Yzerfontein, Western Cape",
+    destination: "Paternoster, Western Cape",
+    waypoint: "Darling, Western Cape|Langebaan, Western Cape",
+    playlist: ["Girls – Lust for Life","Fleet Foxes – Mykonos","Beirut – Nantes","Vampire Weekend – Step","Grizzly Bear – Two Weeks","Real Estate – Talking Backwards","The War on Drugs – Red Eyes","Whitney – No Woman","Big Thief – Shark Smile","Alvvays – Archie, Marry Me","Snail Mail – Pristine","Beach Fossils – Clash the Truck","DIIV – Doused","Wild Nothing – Chinatown","Craft Spells – After the Moment","Deerhunter – Desire Lines","Cloud Nothings – Stay Useless","Wolf Parade – Modern World","Broken Social Scene – Anthems for a Seventeen-Year-Old Girl","Arcade Fire – Wake Up","The Antlers – Kettering","Bombay Bicycle Club – Shuffle","Two Door Cinema Club – Sun","Foster The People – Houdini","Vampire Weekend – Cape Cod Kwassa Kwassa","Grizzly Bear – Knife","Real Estate – Green Aisles","Whitney – Golden Days"],
     stops: ["Paternoster's seafood shacks","Langebaan lagoon viewpoint"]
   }
 ];
 
-let lastIndex = -1;
+let lastName = null;
+let selectedVibe = null;
 
 function lengthLabel(min){
   if(min <= 25) return "Quick";
@@ -381,12 +538,59 @@ function lengthLabel(min){
   return "Full outing";
 }
 
+function buildMapsUrl(d){
+  const params = new URLSearchParams({
+    api: "1",
+    origin: d.origin,
+    destination: d.destination,
+    travelmode: "driving"
+  });
+  if(d.waypoint){
+    params.set("waypoints", d.waypoint);
+  }
+  return "https://www.google.com/maps/dir/?" + params.toString();
+}
+
+function renderVibeCards(){
+  const container = document.getElementById('vibeCards');
+  container.innerHTML = '';
+  vibeDefs.forEach(v => {
+    const card = document.createElement('div');
+    card.className = 'vibe-card' + (selectedVibe === v.key ? ' selected' : '');
+    card.tabIndex = 0;
+    card.setAttribute('role', 'button');
+    card.innerHTML = `<div class="v-name">${v.name}</div><div class="v-sub">${v.sub}</div>`;
+    card.addEventListener('click', () => toggleVibe(v.key));
+    card.addEventListener('keydown', (e) => {
+      if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); toggleVibe(v.key); }
+    });
+    container.appendChild(card);
+  });
+  updateHint();
+}
+
+function toggleVibe(key){
+  selectedVibe = (selectedVibe === key) ? null : key;
+  renderVibeCards();
+}
+
+function updateHint(){
+  const hint = document.getElementById('pickerHint');
+  if(selectedVibe){
+    const v = vibeDefs.find(x => x.key === selectedVibe);
+    hint.textContent = `Choosing from "${v.name}" drives`;
+  } else {
+    hint.textContent = 'No vibe selected — fully random';
+  }
+}
+
 function pick(){
-  let i;
-  do{ i = Math.floor(Math.random() * drives.length); }
-  while(drives.length > 1 && i === lastIndex);
-  lastIndex = i;
-  render(drives[i]);
+  const pool = selectedVibe ? drives.filter(d => d.vibeKey === selectedVibe) : drives;
+  let candidates = pool.filter(d => d.name !== lastName);
+  if(candidates.length === 0) candidates = pool;
+  const d = candidates[Math.floor(Math.random() * candidates.length)];
+  lastName = d.name;
+  render(d);
 }
 
 function render(d){
@@ -394,6 +598,8 @@ function render(d){
   document.getElementById('durationPill').textContent = `~${d.duration} min`;
   document.getElementById('lengthPill').textContent = lengthLabel(d.duration);
   document.getElementById('vibeLine').textContent = d.vibe;
+  document.getElementById('mapsBtn').href = buildMapsUrl(d);
+  document.getElementById('trackCount').textContent = `${d.playlist.length} tracks`;
 
   const tracksEl = document.getElementById('tracksList');
   tracksEl.innerHTML = '';
@@ -417,7 +623,6 @@ function render(d){
     stopsCard.style.display = 'none';
   }
 
-  // restart squiggle animation
   const svg = document.getElementById('squiggleSvg');
   const newSvg = svg.cloneNode(true);
   svg.parentNode.replaceChild(newSvg, svg);
@@ -429,6 +634,7 @@ function render(d){
   result.classList.add('show');
 }
 
+renderVibeCards();
 document.getElementById('rollBtn').addEventListener('click', pick);
 document.getElementById('againBtn').addEventListener('click', pick);
 </script>
