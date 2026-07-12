@@ -9,6 +9,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Sunday Drive">
 <meta name="theme-color" content="#12232A">
+<link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%2312232A'/%3E%3Cpath d='M15 65 Q30 40 45 55 T75 45 T95 35' stroke='%23E2A54D' stroke-width='6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%2312232A'/%3E%3Cpath d='M15 65 Q30 40 45 55 T75 45 T95 35' stroke='%23E2A54D' stroke-width='6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -156,6 +157,54 @@
     transform:translateY(0);
   }
 
+  .photo-frame{
+    position:relative;
+    width:100%;
+    aspect-ratio:16/10;
+    border-radius:16px;
+    overflow:hidden;
+    background:linear-gradient(160deg, #23414B, #17272E);
+    border:1px solid var(--card-line);
+    margin-bottom:20px;
+  }
+  .photo-frame img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    display:block;
+  }
+  .photo-fallback{
+    position:absolute;
+    inset:0;
+    display:none;
+    align-items:flex-end;
+    padding:16px;
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px;
+    color:var(--muted);
+    background:
+      repeating-linear-gradient(135deg, rgba(226,165,77,0.05) 0px, rgba(226,165,77,0.05) 2px, transparent 2px, transparent 14px),
+      linear-gradient(160deg, #23414B, #17272E);
+  }
+  .photo-frame.no-image .photo-fallback{ display:flex; }
+  .photo-frame.no-image img{ display:none; }
+  .photo-scrim{
+    position:absolute;
+    left:0; right:0; bottom:0;
+    height:55%;
+    background:linear-gradient(to top, rgba(18,35,42,0.85), transparent);
+    pointer-events:none;
+  }
+  .photo-credit{
+    position:absolute;
+    right:10px;
+    bottom:8px;
+    font-family:'JetBrains Mono', monospace;
+    font-size:10px;
+    color:rgba(244,239,230,0.55);
+    letter-spacing:0.02em;
+  }
+
   .route-name{
     font-family:'Newsreader', serif;
     font-weight:500;
@@ -229,6 +278,14 @@
   .maps-link a:hover{
     background:rgba(226,165,77,0.08);
     border-color:var(--gold);
+  }
+  .maps-hint{
+    text-align:center;
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    color:var(--muted);
+    margin-top:-20px;
+    margin-bottom:28px;
   }
 
   .card{
@@ -342,6 +399,13 @@
   </div>
 
   <div id="result">
+    <div class="photo-frame" id="photoFrame">
+      <img id="photoImg" alt="">
+      <div class="photo-scrim"></div>
+      <div class="photo-fallback" id="photoFallback"></div>
+      <div class="photo-credit" id="photoCredit"></div>
+    </div>
+
     <div class="route-name" id="routeName"></div>
     <svg class="squiggle" viewBox="0 0 120 16" id="squiggleSvg">
       <path d="M2 12 Q 20 2, 35 10 T 65 8 T 95 12 T 118 6"/>
@@ -354,6 +418,7 @@
     <div class="maps-link">
       <a id="mapsBtn" href="#" target="_blank" rel="noopener">Open route in Google Maps →</a>
     </div>
+    <div class="maps-hint" id="mapsHint">Starts from your location, if you allow it</div>
 
     <div class="card">
       <h2><span>Playlist</span><span class="count" id="trackCount"></span></h2>
@@ -380,6 +445,7 @@ const vibeDefs = [
   { key: "epic", name: "Epic & Adventurous", sub: "Longer hauls, big scenery" }
 ];
 
+// image: exact Wikimedia Commons filename (verified to exist). Omit for a styled fallback panel.
 const drives = [
   {
     name: "Muizenberg → Kalk Bay",
@@ -388,6 +454,7 @@ const drives = [
     vibeKey: "calm",
     origin: "Muizenberg, Cape Town",
     destination: "Kalk Bay, Cape Town",
+    image: "Kalk_Bay_Harbour.jpg",
     playlist: ["Jack Johnson – Better Together","Hollow Coves – Coastline","Ben Howard – Old Pine","Ziggy Alberts – Runaway","Vance Joy – Saturday Sun","Angus & Julia Stone – Chateau","Hollow Coves – The Woods","Cat Stevens – Wild World"],
     stops: ["Coffee at Olympia Café in Kalk Bay","Browse the harbour's bookshops and antique stores","Watch the seals lounging around the harbour"]
   },
@@ -399,6 +466,7 @@ const drives = [
     origin: "Sea Point, Cape Town",
     destination: "Hout Bay, Cape Town",
     waypoint: "Chapman's Peak Drive, Cape Town",
+    image: "Chapman's Peak, South Africa.jpg",
     playlist: ["The Killers – Mr. Brightside","Empire of the Sun – Walking on a Dream","MGMT – Electric Feel","Foster The People – Sit Next to Me","Two Door Cinema Club – What You Know","COIN – Talk Too Much","Phoenix – Lisztomania","Passion Pit – Sleepyhead","Metric – Help I'm Alone","Bastille – Pompeii"],
     stops: ["Chapman's Peak lookout points (toll applies)","Fish and chips in Hout Bay","Ice cream while watching the boats return to harbour"]
   },
@@ -409,6 +477,7 @@ const drives = [
     vibeKey: "classic",
     origin: "Gordon's Bay, Western Cape",
     destination: "Rooi-Els, Western Cape",
+    image: "Kogel Baai or Cool Bay Beach Line.jpg",
     playlist: ["Fleetwood Mac – Dreams","Eagles – Take It Easy","America – Ventura Highway","Elton John – Tiny Dancer","Bruce Springsteen – Dancing in the Dark","Tom Petty – Free Fallin'","Steve Miller Band – The Joker","Boz Scaggs – Lowdown"],
     stops: ["Sunset viewpoints along the R44","Rooi-Els beach","Whale spotting, June to November"]
   },
@@ -419,6 +488,7 @@ const drives = [
     vibeKey: "upbeat",
     origin: "Bloubergstrand, Cape Town",
     destination: "Melkbosstrand, Cape Town",
+    image: "Table Mountain from Blouberg - South Africa (3609949385).jpg",
     playlist: ["Dayglow – Can I Call You Tonight?","Rex Orange County – Sunflower","Peach Pit – Tommy's Party","Clairo – Sofia","Wallows – Are You Bored Yet?","Boy Pablo – Everytime","Still Woozy – Goodie Bag","Cuco – Lo Que Siento"],
     stops: ["Beachfront café with Table Mountain across the bay","A sunset photography stop","Local bakeries along the way"]
   },
@@ -429,6 +499,7 @@ const drives = [
     vibeKey: "calm",
     origin: "Simon's Town, Western Cape",
     destination: "Cape Point Gate, Cape Point Nature Reserve",
+    image: "Boulders Beach (33514448458).jpg",
     playlist: ["Bon Iver – Holocene","Novo Amor – Anchor","Lord Huron – The Night We Met","Phoebe Bridgers – Scott Street","Hozier – Cherry Wine","Daughter – Youth","José González – Stay Alive","The National – I Need My Girl","Sufjan Stevens – Futile Devices","Fleet Foxes – Blue Ridge Mountains"],
     stops: ["Boulders Beach penguin viewpoint","Buffels Bay for a picnic","Watch for baboons and ostriches en route"]
   },
@@ -440,6 +511,7 @@ const drives = [
     origin: "Sea Point, Cape Town",
     destination: "Hout Bay, Cape Town",
     waypoint: "Camps Bay, Cape Town",
+    image: "Duiker Island and The Sentinel Mountain Peak, Hout Bay, Cape Town, South Africa.jpg",
     playlist: ["Khruangbin – Time (You and I)","Beach House – Space Song","Tycho – Awake","Bonobo – Cirrus","The War on Drugs – Under the Pressure","Poolside – Harvest Moon","Toro y Moi – Rose Quartz","Cut Copy – Lights & Music","STRFKR – Golden Light","Washed Out – Feel It All Around","Men I Trust – Show Me How"],
     stops: ["Llandudno viewpoint from Suikerbossie Drive","Fish on the Rocks at Hout Bay harbour"]
   },
@@ -451,6 +523,7 @@ const drives = [
     origin: "Lakeside, Cape Town",
     destination: "Kalk Bay, Cape Town",
     waypoint: "Boyes Drive, Cape Town",
+    image: "Baden Powell Drive across False bay - panoramio.jpg",
     playlist: ["Half Moon Run – Full Circle","Local Natives – Dark Days","The Paper Kites – Bloom","Sufjan Stevens – Mystery of Love","Beach House – Myth"],
     stops: ["Whale-watching pullouts, June to November","The old Shark Spotters lookout"]
   },
@@ -471,6 +544,7 @@ const drives = [
     vibeKey: "upbeat",
     origin: "Cape Town City Centre",
     destination: "Signal Hill, Cape Town",
+    image: "Cape Town City Bowl from Signal Hill.JPG",
     playlist: ["Bombay Bicycle Club – Feel","Glass Animals – Gooey","alt-J – Breezeblocks","Foals – My Number","MGMT – Kids"],
     stops: []
   },
@@ -503,6 +577,7 @@ const drives = [
     origin: "Gordon's Bay, Western Cape",
     destination: "Hermanus, Western Cape",
     waypoint: "Betty's Bay, Western Cape",
+    image: "Coastline at Hermanus, Walker Bay (South Africa).jpg",
     playlist: ["Fleet Foxes – White Winter Hymnal","The Head and the Heart – Rivers and Roads","First Aid Kit – Emmylou","Bon Iver – Skinny Love","The Lumineers – Ho Hey","Mumford & Sons – The Cave","Ben Howard – Only Love","Iron & Wine – Boy with a Coin","The Paper Kites – Woodland","Vance Joy – Riptide","City and Colour – Comin' Home","The Decemberists – June Hymn","Local Natives – Airplanes","Novo Amor – Origami","José González – Heartbeats","Damien Rice – The Blower's Daughter","Ray LaMontagne – Trouble","Blind Pilot – Three Rounds and a Sound","The Tallest Man on Earth – The Wild Hunt","Wild Rivers – Thinking 'Bout Love","Andrew Belle – In My Veins","Foy Vance – Guiding Light","Gregory Alan Isakov – The Stable Song","Phosphorescent – Song for Zula"],
     stops: ["Stony Point penguin colony in Betty's Bay","Hermanus cliff path, prime whale watching June–Nov"]
   },
@@ -538,10 +613,10 @@ function lengthLabel(min){
   return "Full outing";
 }
 
-function buildMapsUrl(d){
+function buildMapsUrl(d, originOverride){
   const params = new URLSearchParams({
     api: "1",
-    origin: d.origin,
+    origin: originOverride || d.origin,
     destination: d.destination,
     travelmode: "driving"
   });
@@ -549,6 +624,37 @@ function buildMapsUrl(d){
     params.set("waypoints", d.waypoint);
   }
   return "https://www.google.com/maps/dir/?" + params.toString();
+}
+
+function openRouteFromHere(d){
+  const fallbackUrl = buildMapsUrl(d);
+  const hint = document.getElementById('mapsHint');
+
+  if(!navigator.geolocation){
+    window.open(fallbackUrl, '_blank', 'noopener');
+    return;
+  }
+
+  hint.textContent = 'Finding your location…';
+
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      const originCoords = `${pos.coords.latitude},${pos.coords.longitude}`;
+      window.open(buildMapsUrl(d, originCoords), '_blank', 'noopener');
+      hint.textContent = 'Started from your location';
+    },
+    err => {
+      window.open(fallbackUrl, '_blank', 'noopener');
+      hint.textContent = err.code === 1
+        ? 'Location denied — started from ' + d.origin
+        : 'Couldn\'t get your location — started from ' + d.origin;
+    },
+    { timeout: 6000, maximumAge: 300000 }
+  );
+}
+
+function buildImageUrl(filename){
+  return "https://commons.wikimedia.org/wiki/Special:FilePath/" + encodeURIComponent(filename) + "?width=800";
 }
 
 function renderVibeCards(){
@@ -593,13 +699,31 @@ function pick(){
   render(d);
 }
 
+let currentDrive = null;
+
 function render(d){
+  currentDrive = d;
   document.getElementById('routeName').textContent = d.name;
   document.getElementById('durationPill').textContent = `~${d.duration} min`;
   document.getElementById('lengthPill').textContent = lengthLabel(d.duration);
   document.getElementById('vibeLine').textContent = d.vibe;
   document.getElementById('mapsBtn').href = buildMapsUrl(d);
+  document.getElementById('mapsHint').textContent = 'Starts from your location, if you allow it';
   document.getElementById('trackCount').textContent = `${d.playlist.length} tracks`;
+
+  const frame = document.getElementById('photoFrame');
+  const img = document.getElementById('photoImg');
+  const credit = document.getElementById('photoCredit');
+  if(d.image){
+    frame.style.display = '';
+    frame.classList.remove('no-image');
+    img.onerror = () => { frame.style.display = 'none'; };
+    img.src = buildImageUrl(d.image);
+    img.alt = d.name;
+    credit.textContent = 'Photo · Wikimedia Commons';
+  } else {
+    frame.style.display = 'none';
+  }
 
   const tracksEl = document.getElementById('tracksList');
   tracksEl.innerHTML = '';
@@ -637,6 +761,10 @@ function render(d){
 renderVibeCards();
 document.getElementById('rollBtn').addEventListener('click', pick);
 document.getElementById('againBtn').addEventListener('click', pick);
+document.getElementById('mapsBtn').addEventListener('click', (e) => {
+  e.preventDefault();
+  if(currentDrive) openRouteFromHere(currentDrive);
+});
 </script>
 
 </body>
