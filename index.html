@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Sunday Drive</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Sunday Drive">
+<meta name="theme-color" content="#12232A">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%2312232A'/%3E%3Cpath d='M15 65 Q30 40 45 55 T75 45 T95 35' stroke='%23E2A54D' stroke-width='6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%2312232A'/%3E%3Cpath d='M15 65 Q30 40 45 55 T75 45 T95 35' stroke='%23E2A54D' stroke-width='6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Work+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#12232A;
+    --card:#1B2F37;
+    --card-line:#2A434C;
+    --gold:#E2A54D;
+    --text:#F4EFE6;
+    --muted:#93ACAE;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(ellipse 900px 500px at 50% -10%, rgba(226,165,77,0.08), transparent),
+      var(--bg);
+    color:var(--text);
+    font-family:'Work Sans', sans-serif;
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:32px 20px;
+  }
+  .wrap{
+    width:100%;
+    max-width:560px;
+  }
+  .eyebrow{
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    color:var(--muted);
+    text-align:center;
+    margin-bottom:10px;
+  }
+  h1{
+    font-family:'Newsreader', serif;
+    font-weight:500;
+    font-size:clamp(28px, 6vw, 40px);
+    text-align:center;
+    margin:0 0 36px;
+    color:var(--text);
+    letter-spacing:-0.01em;
+  }
+  .picker{
+    display:flex;
+    justify-content:center;
+    margin-bottom:8px;
+  }
+  button.roll{
+    font-family:'Work Sans', sans-serif;
+    font-weight:600;
+    font-size:16px;
+    color:#12232A;
+    background:var(--gold);
+    border:none;
+    border-radius:999px;
+    padding:16px 34px;
+    cursor:pointer;
+    transition:transform 0.15s ease, box-shadow 0.15s ease;
+    box-shadow:0 0 0 rgba(226,165,77,0);
+  }
+  button.roll:hover{
+    transform:translateY(-1px);
+    box-shadow:0 8px 24px rgba(226,165,77,0.25);
+  }
+  button.roll:active{ transform:translateY(0px); }
+  button.roll:focus-visible{
+    outline:2px solid var(--gold);
+    outline-offset:3px;
+  }
+
+  #result{
+    margin-top:40px;
+    opacity:0;
+    transform:translateY(6px);
+    transition:opacity 0.5s ease, transform 0.5s ease;
+  }
+  #result.show{
+    opacity:1;
+    transform:translateY(0);
+  }
+
+  .route-name{
+    font-family:'Newsreader', serif;
+    font-weight:500;
+    font-size:clamp(24px, 5vw, 30px);
+    text-align:center;
+    margin:0 0 6px;
+    line-height:1.2;
+  }
+
+  .squiggle{
+    display:block;
+    margin:2px auto 18px;
+    width:120px;
+    height:16px;
+  }
+  .squiggle path{
+    fill:none;
+    stroke:var(--gold);
+    stroke-width:2;
+    stroke-linecap:round;
+    stroke-dasharray:200;
+    stroke-dashoffset:200;
+    animation:draw 0.9s ease forwards 0.15s;
+  }
+  @keyframes draw{ to{ stroke-dashoffset:0; } }
+
+  .meta{
+    display:flex;
+    justify-content:center;
+    gap:10px;
+    align-items:center;
+    margin-bottom:22px;
+    flex-wrap:wrap;
+  }
+  .pill{
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px;
+    letter-spacing:0.03em;
+    color:var(--muted);
+    border:1px solid var(--card-line);
+    border-radius:999px;
+    padding:5px 12px;
+  }
+  .vibe{
+    text-align:center;
+    font-style:italic;
+    color:var(--muted);
+    font-size:15px;
+    margin-bottom:28px;
+  }
+
+  .card{
+    background:var(--card);
+    border:1px solid var(--card-line);
+    border-radius:16px;
+    padding:24px 26px;
+    margin-bottom:16px;
+  }
+  .card h2{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    letter-spacing:0.12em;
+    text-transform:uppercase;
+    color:var(--gold);
+    margin:0 0 14px;
+    font-weight:500;
+  }
+  .tracks{
+    list-style:none;
+    margin:0;
+    padding:0;
+  }
+  .tracks li{
+    display:flex;
+    gap:12px;
+    padding:7px 0;
+    font-size:14.5px;
+    border-bottom:1px solid rgba(255,255,255,0.04);
+  }
+  .tracks li:last-child{ border-bottom:none; }
+  .tracks .num{
+    font-family:'JetBrains Mono', monospace;
+    color:var(--muted);
+    font-size:13px;
+    width:18px;
+    flex-shrink:0;
+  }
+  .stops{
+    list-style:none;
+    margin:0;
+    padding:0;
+  }
+  .stops li{
+    display:flex;
+    gap:10px;
+    padding:6px 0;
+    font-size:14.5px;
+    line-height:1.4;
+  }
+  .stops li::before{
+    content:"–";
+    color:var(--gold);
+    flex-shrink:0;
+  }
+
+  .again{
+    display:flex;
+    justify-content:center;
+    margin-top:8px;
+  }
+  button.again-btn{
+    font-family:'Work Sans', sans-serif;
+    font-size:13.5px;
+    color:var(--muted);
+    background:none;
+    border:1px solid var(--card-line);
+    border-radius:999px;
+    padding:9px 20px;
+    cursor:pointer;
+    transition:color 0.15s ease, border-color 0.15s ease;
+  }
+  button.again-btn:hover{
+    color:var(--text);
+    border-color:var(--gold);
+  }
+  button.again-btn:focus-visible{
+    outline:2px solid var(--gold);
+    outline-offset:2px;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    #result, .squiggle path{ transition:none; animation:none; }
+    .squiggle path{ stroke-dashoffset:0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="eyebrow">Western Cape · Sunday</div>
+  <h1>Where to this week?</h1>
+
+  <div class="picker">
+    <button class="roll" id="rollBtn">Pick my Sunday drive</button>
+  </div>
+
+  <div id="result">
+    <div class="route-name" id="routeName"></div>
+    <svg class="squiggle" viewBox="0 0 120 16" id="squiggleSvg">
+      <path d="M2 12 Q 20 2, 35 10 T 65 8 T 95 12 T 118 6"/>
+    </svg>
+    <div class="meta">
+      <span class="pill" id="durationPill"></span>
+      <span class="pill" id="lengthPill"></span>
+    </div>
+    <div class="vibe" id="vibeLine"></div>
+
+    <div class="card">
+      <h2>Playlist</h2>
+      <ul class="tracks" id="tracksList"></ul>
+    </div>
+
+    <div class="card" id="stopsCard">
+      <h2>Worth stopping for</h2>
+      <ul class="stops" id="stopsList"></ul>
+    </div>
+
+    <div class="again">
+      <button class="again-btn" id="againBtn">Roll again</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const drives = [
+  {
+    name: "Muizenberg → Kalk Bay",
+    duration: 22,
+    vibe: "Calm, reflective, slow",
+    playlist: ["Jack Johnson – Better Together","Hollow Coves – Coastline","Ben Howard – Old Pine","Ziggy Alberts – Runaway","Vance Joy – Saturday Sun","Angus & Julia Stone – Chateau","Hollow Coves – The Woods"],
+    stops: ["Coffee at Olympia Café in Kalk Bay","Browse the harbour's bookshops and antique stores","Watch the seals lounging around the harbour"]
+  },
+  {
+    name: "Sea Point → Hout Bay via Chapman's Peak",
+    duration: 30,
+    vibe: "Windows down, road-trip energy",
+    playlist: ["The Killers – Mr. Brightside","Empire of the Sun – Walking on a Dream","MGMT – Electric Feel","Foster The People – Sit Next to Me","Two Door Cinema Club – What You Know","COIN – Talk Too Much","Phoenix – Lisztomania"],
+    stops: ["Chapman's Peak lookout points (toll applies)","Fish and chips in Hout Bay","Ice cream while watching the boats return to harbour"]
+  },
+  {
+    name: "Gordon's Bay → Rooi-Els (Clarence Drive)",
+    duration: 25,
+    vibe: "Nostalgic, timeless, effortlessly cool",
+    playlist: ["Fleetwood Mac – Dreams","Eagles – Take It Easy","America – Ventura Highway","Elton John – Tiny Dancer","Bruce Springsteen – Dancing in the Dark","Tom Petty – Free Fallin'"],
+    stops: ["Sunset viewpoints along the R44","Rooi-Els beach","Whale spotting, June to November"]
+  },
+  {
+    name: "Bloubergstrand → Melkbosstrand",
+    duration: 23,
+    vibe: "Coffee, cameras and ocean air",
+    playlist: ["Dayglow – Can I Call You Tonight?","Rex Orange County – Sunflower","Peach Pit – Tommy's Party","Clairo – Sofia","Wallows – Are You Bored Yet?","Boy Pablo – Everytime"],
+    stops: ["Beachfront café with Table Mountain across the bay","A sunset photography stop","Local bakeries along the way"]
+  },
+  {
+    name: "Simon's Town → Cape Point Gate",
+    duration: 30,
+    vibe: "Quiet moments, deep breaths",
+    playlist: ["Bon Iver – Holocene","Novo Amor – Anchor","Lord Huron – The Night We Met","Phoebe Bridgers – Scott Street","Hozier – Cherry Wine","Daughter – Youth","José González – Stay Alive"],
+    stops: ["Boulders Beach penguin viewpoint","Buffels Bay for a picnic","Watch for baboons and ostriches en route"]
+  },
+  {
+    name: "Victoria Road: Sea Point → Camps Bay → Hout Bay",
+    duration: 35,
+    vibe: "Big Atlantic views, unhurried",
+    playlist: ["Khruangbin – Time (You and I)","Beach House – Space Song","Tycho – Awake","Bonobo – Cirrus","The War on Drugs – Under the Pressure"],
+    stops: ["Llandudno viewpoint from Suikerbossie Drive","Fish on the Rocks at Hout Bay harbour"]
+  },
+  {
+    name: "Boyes Drive: Lakeside → Kalk Bay",
+    duration: 15,
+    vibe: "Quick hit, big payoff",
+    playlist: ["Half Moon Run – Full Circle","Local Natives – Dark Days","The Paper Kites – Bloom","Sufjan Stevens – Mystery of Love"],
+    stops: ["Whale-watching pullouts, June to November","The old Shark Spotters lookout"]
+  },
+  {
+    name: "Durbanville → Philadelphia",
+    duration: 28,
+    vibe: "Farmland, quiet backroads",
+    playlist: ["Chris Stapleton – Tennessee Whiskey","The Lumineers – Flowers in Your Hair","Zac Brown Band – Colder Weather","Mumford & Sons – Below My Feet"],
+    stops: ["Pepper Tree Art Stable & Coffee Shop","Eucalyptus-shaded farm road most of the way"]
+  },
+  {
+    name: "Signal Hill loop",
+    duration: 15,
+    vibe: "Quick city-and-sea fix",
+    playlist: ["Bombay Bicycle Club – Feel","Glass Animals – Gooey","alt-J – Breezeblocks"],
+    stops: []
+  },
+  {
+    name: "Ou Kaapse Weg → Cape Point Nature Reserve gate",
+    duration: 20,
+    vibe: "Mountain pass into the wild",
+    playlist: ["Bibio – Lovers' Carvings","Nils Frahm – Says","Ólafur Arnalds – Near Light"],
+    stops: ["Silvermine viewpoint on the way up"]
+  },
+  {
+    name: "Sir Lowry's Pass",
+    duration: 20,
+    vibe: "Big view, up and over",
+    playlist: ["The Paper Kites – Electric Indigo","Novo Amor – Terraform","Efterklang – Mirador"],
+    stops: ["Steenbras Dam viewpoint (catch it on the way back)"]
+  },
+  {
+    name: "Gordon's Bay → Betty's Bay → Hermanus",
+    duration: 75,
+    vibe: "Half-day whale coast",
+    playlist: ["Fleet Foxes – White Winter Hymnal","The Head and the Heart – Rivers and Roads","First Aid Kit – Emmylou","Bon Iver – Skinny Love"],
+    stops: ["Stony Point penguin colony in Betty's Bay","Hermanus cliff path, prime whale watching June–Nov"]
+  },
+  {
+    name: "Bainskloof Pass: Wellington → Ceres",
+    duration: 45,
+    vibe: "Wild mountain river drive",
+    playlist: ["Fink – Warm Shadow","Ben Howard – Keep Your Head Up","James Vincent McMorrow – Cavalier"],
+    stops: ["Swimming spots along the Witte River","Picnic sites in Limietberg Nature Reserve"]
+  },
+  {
+    name: "West Coast: Yzerfontein → Darling → Langebaan → Paternoster",
+    duration: 90,
+    vibe: "Big sky, small towns, full day",
+    playlist: ["Local Natives – Airplanes","Fleet Foxes – Mykonos","Beirut – Nantes","Vampire Weekend – Step"],
+    stops: ["Paternoster's seafood shacks","Langebaan lagoon viewpoint"]
+  }
+];
+
+let lastIndex = -1;
+
+function lengthLabel(min){
+  if(min <= 25) return "Quick";
+  if(min <= 45) return "Half morning";
+  return "Full outing";
+}
+
+function pick(){
+  let i;
+  do{ i = Math.floor(Math.random() * drives.length); }
+  while(drives.length > 1 && i === lastIndex);
+  lastIndex = i;
+  render(drives[i]);
+}
+
+function render(d){
+  document.getElementById('routeName').textContent = d.name;
+  document.getElementById('durationPill').textContent = `~${d.duration} min`;
+  document.getElementById('lengthPill').textContent = lengthLabel(d.duration);
+  document.getElementById('vibeLine').textContent = d.vibe;
+
+  const tracksEl = document.getElementById('tracksList');
+  tracksEl.innerHTML = '';
+  d.playlist.forEach((t, idx) => {
+    const li = document.createElement('li');
+    li.innerHTML = `<span class="num">${String(idx+1).padStart(2,'0')}</span><span>${t}</span>`;
+    tracksEl.appendChild(li);
+  });
+
+  const stopsCard = document.getElementById('stopsCard');
+  const stopsEl = document.getElementById('stopsList');
+  stopsEl.innerHTML = '';
+  if(d.stops.length){
+    stopsCard.style.display = '';
+    d.stops.forEach(s => {
+      const li = document.createElement('li');
+      li.textContent = s;
+      stopsEl.appendChild(li);
+    });
+  } else {
+    stopsCard.style.display = 'none';
+  }
+
+  // restart squiggle animation
+  const svg = document.getElementById('squiggleSvg');
+  const newSvg = svg.cloneNode(true);
+  svg.parentNode.replaceChild(newSvg, svg);
+  newSvg.id = 'squiggleSvg';
+
+  const result = document.getElementById('result');
+  result.classList.remove('show');
+  void result.offsetWidth;
+  result.classList.add('show');
+}
+
+document.getElementById('rollBtn').addEventListener('click', pick);
+document.getElementById('againBtn').addEventListener('click', pick);
+</script>
+
+</body>
+</html>
