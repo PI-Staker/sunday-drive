@@ -70,6 +70,17 @@
     text-align:center;
     margin-bottom:12px;
   }
+  .season-banner{
+    text-align:center;
+    font-family:'Work Sans', sans-serif;
+    font-size:13.5px;
+    color:var(--text);
+    background:rgba(226,165,77,0.08);
+    border:1px solid rgba(226,165,77,0.3);
+    border-radius:12px;
+    padding:10px 16px;
+    margin-bottom:20px;
+  }
   .vibes{
     display:grid;
     grid-template-columns:repeat(2, 1fr);
@@ -390,6 +401,8 @@
   <div class="eyebrow">Western Cape · Sunday</div>
   <h1>Where to this week?</h1>
 
+  <div class="season-banner" id="seasonBanner" style="display:none;"></div>
+
   <div class="vibes-label">Pick a vibe (optional)</div>
   <div class="vibes" id="vibeCards"></div>
 
@@ -413,6 +426,7 @@
     <div class="meta">
       <span class="pill" id="durationPill"></span>
       <span class="pill" id="lengthPill"></span>
+      <span class="pill" id="seasonPill" style="display:none;"></span>
     </div>
     <div class="vibe" id="vibeLine"></div>
     <div class="maps-link">
@@ -601,6 +615,18 @@ const drives = [
     waypoint: "Darling, Western Cape|Langebaan, Western Cape",
     playlist: ["Girls – Lust for Life","Fleet Foxes – Mykonos","Beirut – Nantes","Vampire Weekend – Step","Grizzly Bear – Two Weeks","Real Estate – Talking Backwards","The War on Drugs – Red Eyes","Whitney – No Woman","Big Thief – Shark Smile","Alvvays – Archie, Marry Me","Snail Mail – Pristine","Beach Fossils – Clash the Truck","DIIV – Doused","Wild Nothing – Chinatown","Craft Spells – After the Moment","Deerhunter – Desire Lines","Cloud Nothings – Stay Useless","Wolf Parade – Modern World","Broken Social Scene – Anthems for a Seventeen-Year-Old Girl","Arcade Fire – Wake Up","The Antlers – Kettering","Bombay Bicycle Club – Shuffle","Two Door Cinema Club – Sun","Foster The People – Houdini","Vampire Weekend – Cape Cod Kwassa Kwassa","Grizzly Bear – Knife","Real Estate – Green Aisles","Whitney – Golden Days"],
     stops: ["Paternoster's seafood shacks","Langebaan lagoon viewpoint"]
+  },
+  {
+    name: "The Wildflower Route: West Coast → Namaqualand",
+    duration: 660,
+    vibe: "Follow the bloom — a once-a-year, multi-day road trip",
+    vibeKey: "epic",
+    seasonal: { label: "🌼 Wildflower season", activeMonths: [7, 8, 9] },
+    origin: "Cape Town, Western Cape",
+    destination: "Namaqua National Park, Northern Cape",
+    waypoint: "West Coast National Park, Western Cape|Darling, Western Cape|Clanwilliam, Western Cape|Nieuwoudtville, Western Cape",
+    playlist: ["Fleet Foxes – Blue Ridge Mountains","The Head and the Heart – Honeybee","Ben Howard – Small Things","Vance Joy – Georgia","The Lumineers – Cleopatra","Milky Chance – Stolen Dance","Hozier – Work Song","The Paper Kites – Featherstone","Gregory Alan Isakov – Second Chances","City and Colour – Body in a Box","Dawes – When My Time Comes","Mt. Joy – Silver Lining","Rayland Baxter – Yellow Eyes","Bahamas – All the Time","Shakey Graves – Roll The Bones","The Tallest Man on Earth – Fields of Our Home","Iron & Wine – Naked As We Came","Bon Iver – Towers"],
+    stops: ["West Coast National Park's Postberg section — Cape daisies and vygies against Langebaan Lagoon","Darling for farm stalls and a slow lunch","Nieuwoudtville, the \"bulb capital of the world\"","Namaqua National Park's Skilpad section — the grand finale, best viewed 10am–3pm when blooms are open"]
   }
 ];
 
@@ -610,7 +636,8 @@ let selectedVibe = null;
 function lengthLabel(min){
   if(min <= 25) return "Quick";
   if(min <= 45) return "Half morning";
-  return "Full outing";
+  if(min <= 180) return "Full outing";
+  return "Multi-day trip";
 }
 
 function buildMapsUrl(d, originOverride){
@@ -690,8 +717,30 @@ function updateHint(){
   }
 }
 
+function isInSeason(d){
+  if(!d.seasonal) return true;
+  const currentMonth = new Date().getMonth() + 1; // 1-indexed
+  return d.seasonal.activeMonths.includes(currentMonth);
+}
+
+function eligibleDrives(){
+  return drives.filter(isInSeason);
+}
+
+function renderSeasonBanner(){
+  const banner = document.getElementById('seasonBanner');
+  const inSeasonSpecial = drives.find(d => d.seasonal && isInSeason(d));
+  if(inSeasonSpecial){
+    banner.style.display = '';
+    banner.textContent = `${inSeasonSpecial.seasonal.label} is on — "${inSeasonSpecial.name}" is in the mix for a little while`;
+  } else {
+    banner.style.display = 'none';
+  }
+}
+
 function pick(){
-  const pool = selectedVibe ? drives.filter(d => d.vibeKey === selectedVibe) : drives;
+  const available = eligibleDrives();
+  const pool = selectedVibe ? available.filter(d => d.vibeKey === selectedVibe) : available;
   let candidates = pool.filter(d => d.name !== lastName);
   if(candidates.length === 0) candidates = pool;
   const d = candidates[Math.floor(Math.random() * candidates.length)];
@@ -704,12 +753,22 @@ let currentDrive = null;
 function render(d){
   currentDrive = d;
   document.getElementById('routeName').textContent = d.name;
-  document.getElementById('durationPill').textContent = `~${d.duration} min`;
+  document.getElementById('durationPill').textContent = d.duration > 180
+    ? `~${Math.round(d.duration / 60)} hrs total driving`
+    : `~${d.duration} min`;
   document.getElementById('lengthPill').textContent = lengthLabel(d.duration);
   document.getElementById('vibeLine').textContent = d.vibe;
   document.getElementById('mapsBtn').href = buildMapsUrl(d);
   document.getElementById('mapsHint').textContent = 'Starts from your location, if you allow it';
   document.getElementById('trackCount').textContent = `${d.playlist.length} tracks`;
+
+  const seasonPill = document.getElementById('seasonPill');
+  if(d.seasonal){
+    seasonPill.style.display = '';
+    seasonPill.textContent = d.seasonal.label;
+  } else {
+    seasonPill.style.display = 'none';
+  }
 
   const frame = document.getElementById('photoFrame');
   const img = document.getElementById('photoImg');
@@ -759,6 +818,7 @@ function render(d){
 }
 
 renderVibeCards();
+renderSeasonBanner();
 document.getElementById('rollBtn').addEventListener('click', pick);
 document.getElementById('againBtn').addEventListener('click', pick);
 document.getElementById('mapsBtn').addEventListener('click', (e) => {
